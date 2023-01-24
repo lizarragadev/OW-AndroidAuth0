@@ -107,7 +107,6 @@ proguard/
 *.ipr
 *~
 *.swp
-
 # Keystore files
 
 # Google Services (e.g. APIs or Firebase)
