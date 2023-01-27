@@ -4,9 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.auth0.android.Auth0
@@ -24,19 +26,19 @@ import dev.lizarraga.auth0login.ui.theme.OW_AndroidAuth0LoginTheme
 class MainActivity: ComponentActivity() {
     private lateinit var client: Auth0
     private lateinit var apiClient: AuthenticationAPIClient
-
+    
     private lateinit var credential: CredentialsManager
 
     private var cachedUserProfile: UserProfile? = null
     private var cachedCredentials: Credentials? = null
-
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         config()
 
         if(credential.hasValidCredentials()) {
-            generateCredenciales()
+            generarCredenciales()
         }
 
         setContent {
@@ -47,12 +49,13 @@ class MainActivity: ComponentActivity() {
     }
 
     fun config() {
-        client = Auth0(getString(R.string.com_auth0_client_id), getString(R.string.com_auth0_domain))
+        client = Auth0(
+            getString(R.string.com_auth0_client_id),
+            getString(R.string.com_auth0_domain)
+        )
         apiClient = AuthenticationAPIClient(client)
-
-        val authentication = AuthenticationAPIClient(client)
         val storage = SharedPreferencesStorage(this)
-        credential = CredentialsManager(authentication, storage)
+        credential = CredentialsManager(apiClient, storage)
     }
 
     @Composable
@@ -82,44 +85,47 @@ class MainActivity: ComponentActivity() {
         WebAuthProvider
             .login(client)
             .withScheme(getString(R.string.com_auth0_scheme))
-            .start(this, object : Callback<Credentials, AuthenticationException> {
+            .start(this, object: Callback<Credentials, AuthenticationException> {
                 override fun onFailure(error: AuthenticationException) {
                     println("Error: ${error.message}")
                     cachedCredentials = null
                 }
-                override fun onSuccess(credentials: Credentials) {
-                    credential.saveCredentials(credentials)
-                    cachedCredentials = credentials
+
+                override fun onSuccess(result: Credentials) {
+                    credential.saveCredentials(result)
+                    cachedCredentials = result
                     getUserProfile()
                 }
             })
     }
 
-    private fun getUserProfile() {
-        if (cachedCredentials == null) {
+    fun getUserProfile() {
+        if(cachedCredentials == null) {
             return
         }
         apiClient
             .userInfo(cachedCredentials!!.accessToken)
-            .start(object : Callback<UserProfile, AuthenticationException> {
-                override fun onFailure(exception: AuthenticationException) {
-                    println(exception.message)
+            .start(object: Callback<UserProfile, AuthenticationException> {
+                override fun onFailure(error: AuthenticationException) {
+                    println(error.message)
                 }
-                override fun onSuccess(profile: UserProfile) {
-                    cachedUserProfile = profile
+
+                override fun onSuccess(result: UserProfile) {
+                    cachedUserProfile = result
                     sendUserProfile()
                 }
+
             })
     }
 
-    private fun sendUserProfile() {
+    fun sendUserProfile() {
         val intent = Intent(this@MainActivity, SecondActivity::class.java)
         intent.putExtra("userProfile", cachedUserProfile)
         startActivity(intent)
         finish()
     }
 
-    fun generateCredenciales() {
+    fun generarCredenciales() {
         credential.getCredentials(object: Callback<Credentials, CredentialsManagerException> {
             override fun onFailure(error: CredentialsManagerException) {
                 cachedCredentials = null
@@ -129,7 +135,16 @@ class MainActivity: ComponentActivity() {
                 cachedCredentials = result
                 getUserProfile()
             }
+
         })
     }
 
+
 }
+
+
+
+
+
+
+
